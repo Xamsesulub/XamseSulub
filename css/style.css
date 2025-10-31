@@ -432,34 +432,6 @@ body {
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
 }
 
-@keyframes slow-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-@keyframes fast-spin {
-    from {
-        transform: rotate(0deg) scale(1);
-    }
-    to {
-        transform: rotate(360deg) scale(1.2);
-    }
-}
-
-.skill-icon i {
-    display: inline-block;
-    cursor: pointer;
-    animation: slow-spin 12s linear infinite;
-}
-
-.skill-card:hover .skill-icon i {
-    animation: fast-spin 0.6s ease-in-out forwards;
-}
-
 .skill-icon {
     font-size: 3rem;
     background: var(--primary-gradient);
@@ -467,7 +439,17 @@ body {
     -webkit-text-fill-color: transparent;
     background-clip: text;
     margin-bottom: 1rem;
-    transition: transform 0.3s ease;
+    display: block;
+    text-align: center;
+}
+
+.skill-icon i {
+    display: inline-block;
+    transition: transform 0.7s ease;
+}
+
+.skill-card:hover .skill-icon i {
+    transform: rotate(360deg);
 }
 
 .skill-card h3 {
