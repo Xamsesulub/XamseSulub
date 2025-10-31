@@ -428,8 +428,8 @@ body {
 }
 
 .skill-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+    transform: translateY(-8px);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15);
 }
 
 .skill-icon {
@@ -445,11 +445,12 @@ body {
 
 .skill-icon i {
     display: inline-block;
-    transition: transform 0.7s ease;
+    transition: all 0.35s ease-out;
 }
 
 .skill-card:hover .skill-icon i {
-    transform: rotate(360deg);
+    transform: translateY(-6px) scale(1.1);
+    filter: drop-shadow(0 0 12px rgba(130, 90, 255, 0.35));
 }
 
 .skill-card h3 {
