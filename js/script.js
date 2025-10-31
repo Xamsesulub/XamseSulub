@@ -39,14 +39,18 @@ const observerOptions = {
 const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
         if (entry.isIntersecting) {
-            entry.target.classList.add('animate');
+            if (entry.target.classList.contains('about-content')) {
+                entry.target.classList.add('reveal');
+            } else {
+                entry.target.classList.add('animate');
+            }
             observer.unobserve(entry.target);
         }
     });
 }, observerOptions);
 
 // Observe all animated elements
-const animatedElements = document.querySelectorAll('.skill-card, .timeline-item, .contact-card');
+const animatedElements = document.querySelectorAll('.skill-card, .timeline-item, .contact-card, .about-content');
 animatedElements.forEach(el => {
     observer.observe(el);
 });
