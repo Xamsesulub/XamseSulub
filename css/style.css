@@ -213,24 +213,11 @@ body {
 .hero-content h1,
 .hero-content p {
     opacity: 0;
-    animation: fadeInUp 0.8s ease-out forwards;
-}
-
-.hero-content h1 {
-    animation-delay: 0.2s;
-}
-
-.hero-content .hero-tagline {
-    animation-delay: 0.5s;
-}
-
-.hero-content .hero-description {
-    animation-delay: 0.8s;
 }
 
 .hero-content .hero-buttons {
     opacity: 0;
-    animation: fadeInUp 0.8s ease-out 1.1s forwards;
+    animation: fadeInUp 0.8s ease-out 3s forwards;
 }
 
 .hero-title {
@@ -462,25 +449,32 @@ body {
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
 }
 
-@keyframes spinIcon {
-    0% {
+@keyframes slow-spin {
+    from {
         transform: rotate(0deg);
     }
-    50% {
-        transform: rotate(180deg) scale(1.15);
+    to {
+        transform: rotate(360deg);
     }
-    100% {
-        transform: rotate(360deg) scale(1);
+}
+
+@keyframes fast-spin {
+    from {
+        transform: rotate(0deg) scale(1);
+    }
+    to {
+        transform: rotate(360deg) scale(1.2);
     }
 }
 
 .skill-icon i {
     display: inline-block;
     cursor: pointer;
+    animation: slow-spin 12s linear infinite;
 }
 
 .skill-card:hover .skill-icon i {
-    animation: spinIcon 0.8s ease-in-out forwards;
+    animation: fast-spin 0.6s ease-in-out forwards;
 }
 
 .skill-icon {

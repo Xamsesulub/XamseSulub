@@ -79,26 +79,63 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     });
 });
 
-// Hero text typing effect (optional enhancement)
-const heroTagline = document.querySelector('.hero-tagline');
-if (heroTagline) {
-    const text = heroTagline.textContent;
-    heroTagline.textContent = '';
-    heroTagline.style.opacity = '1';
+// Typewriter effect function
+function typewriterEffect(elements, startDelay = 0) {
+    let currentElementIndex = 0;
 
-    let index = 0;
-    const typeSpeed = 50;
+    function typeElement() {
+        if (currentElementIndex >= elements.length) return;
 
-    function typeWriter() {
-        if (index < text.length) {
-            heroTagline.textContent += text.charAt(index);
-            index++;
-            setTimeout(typeWriter, typeSpeed);
+        const element = elements[currentElementIndex];
+        const text = element.getAttribute('data-text') || element.textContent;
+        element.setAttribute('data-text', text);
+        element.textContent = '';
+        element.style.opacity = '1';
+
+        let charIndex = 0;
+        const typeSpeed = Math.floor(Math.random() * (35 - 22 + 1)) + 22;
+
+        function typeChar() {
+            if (charIndex < text.length) {
+                element.textContent += text.charAt(charIndex);
+                charIndex++;
+                setTimeout(typeChar, typeSpeed);
+            } else {
+                setTimeout(() => {
+                    currentElementIndex++;
+                    typeElement();
+                }, 120);
+            }
         }
+
+        typeChar();
     }
 
-    // Start typing after hero loads
-    setTimeout(typeWriter, 1000);
+    setTimeout(typeElement, startDelay);
+}
+
+// Apply typewriter to hero section
+const heroTypewriterElements = document.querySelectorAll('.hero-title, .hero-tagline, .hero-description');
+if (heroTypewriterElements.length > 0) {
+    typewriterEffect(Array.from(heroTypewriterElements), 500);
+}
+
+// Apply typewriter to About Me section when it becomes visible
+const aboutContent = document.querySelector('.about-content');
+if (aboutContent) {
+    const aboutObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const aboutTextElements = aboutContent.querySelectorAll('.about-text h2, .about-text p');
+                if (aboutTextElements.length > 0) {
+                    typewriterEffect(Array.from(aboutTextElements), 200);
+                }
+                aboutObserver.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.2 });
+
+    aboutObserver.observe(aboutContent);
 }
 
 // Add parallax effect to gradient blobs
