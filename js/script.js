@@ -88,9 +88,12 @@ function typewriterEffect(elements, startDelay = 0) {
 
         const element = elements[currentElementIndex];
         const text = element.getAttribute('data-text') || element.textContent;
+
         element.setAttribute('data-text', text);
         element.textContent = '';
+        element.classList.add('typewriter-active');
         element.style.opacity = '1';
+        element.style.visibility = 'visible';
 
         let charIndex = 0;
         const typeSpeed = Math.floor(Math.random() * (35 - 22 + 1)) + 22;
