@@ -416,8 +416,7 @@ body {
     background: white;
     padding: 2rem;
     border-radius: 20px;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    will-change: transform;
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
     box-shadow: 0 4px 20px var(--shadow);
     border: 1px solid var(--border-color);
     opacity: 0;
@@ -430,7 +429,8 @@ body {
 
 .skill-card:hover {
     transform: translateY(-6px);
-    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.12);
+    border-color: #667eea;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
 }
 
 .skill-icon {
@@ -449,15 +449,6 @@ body {
 .skill-icon svg,
 .skill-icon .icon {
     display: inline-block;
-    transition: transform 0.3s ease;
-    transform-origin: center;
-}
-
-.skill-card:hover .skill-icon i,
-.skill-card:hover .skill-icon img,
-.skill-card:hover .skill-icon svg,
-.skill-card:hover .skill-icon .icon {
-    transform: scale(1.15);
 }
 
 .skill-card h3 {
