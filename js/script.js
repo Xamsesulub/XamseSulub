@@ -96,7 +96,7 @@ function typewriterEffect(elements, startDelay = 0) {
         element.style.visibility = 'visible';
 
         let charIndex = 0;
-        const typeSpeed = Math.floor(Math.random() * (35 - 22 + 1)) + 22;
+        const typeSpeed = Math.floor(Math.random() * (18 - 12 + 1)) + 12;
 
         function typeChar() {
             if (charIndex < text.length) {
@@ -104,10 +104,8 @@ function typewriterEffect(elements, startDelay = 0) {
                 charIndex++;
                 setTimeout(typeChar, typeSpeed);
             } else {
-                setTimeout(() => {
-                    currentElementIndex++;
-                    typeElement();
-                }, 120);
+                currentElementIndex++;
+                typeElement();
             }
         }
 
