@@ -1,3 +1,27 @@
+// Typewriter Effect
+function typeWriterEffect(text, elementId, speed = 40) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+
+    let charIndex = 0;
+
+    function typeChar() {
+        if (charIndex < text.length) {
+            element.textContent += text.charAt(charIndex);
+            charIndex++;
+            setTimeout(typeChar, speed);
+        }
+    }
+
+    typeChar();
+}
+
+// Start typewriter on page load
+window.onload = () => {
+    const description = "21-year-old Computer Technology student at OsloMet, passionate about programming and exploring new technologies.";
+    typeWriterEffect(description, 'heroDescription', 40);
+};
+
 // Mobile Menu Toggle
 const mobileMenuToggle = document.getElementById('mobileMenuToggle');
 const navMenu = document.getElementById('navMenu');
