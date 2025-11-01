@@ -1,4 +1,16 @@
-.shooter-body {
+/*
+    Neon Survival Shooter - Styles
+    All classes prefixed with "ns-" to avoid conflicts
+    Includes: dark cyber background, neon glow effects, responsive layout
+*/
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
     margin: 0;
     padding: 0;
     overflow: hidden;
@@ -6,153 +18,114 @@
     background: radial-gradient(ellipse at center, #1a0a2e 0%, #0a0a1a 50%, #000000 100%);
     width: 100vw;
     height: 100vh;
-    position: relative;
 }
 
-#gameCanvas {
+#ns-game-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#ns-canvas {
     display: block;
     width: 100%;
     height: 100%;
     background: transparent;
 }
 
-.shooter-hud {
+#ns-hud {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
     padding: 20px;
     z-index: 100;
     pointer-events: none;
 }
 
-.hud-left,
-.hud-right {
+.ns-hud-left,
+.ns-hud-right {
     display: flex;
     flex-direction: column;
-    gap: 15px;
-}
-
-.hud-center {
-    position: absolute;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-.back-home-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 50px;
-    height: 50px;
-    background: rgba(138, 43, 226, 0.2);
-    color: #a78bfa;
-    text-decoration: none;
-    border-radius: 12px;
-    border: 2px solid rgba(138, 43, 226, 0.4);
-    transition: all 0.3s ease;
-    font-size: 20px;
-    pointer-events: all;
-    backdrop-filter: blur(10px);
-}
-
-.back-home-btn:hover {
-    background: rgba(138, 43, 226, 0.3);
-    border-color: #a78bfa;
-    box-shadow: 0 0 20px rgba(138, 43, 226, 0.5);
-    transform: translateX(-50%) translateY(-2px);
-}
-
-.hud-item {
-    display: flex;
-    align-items: center;
     gap: 10px;
-    padding: 12px 20px;
-    background: rgba(0, 0, 0, 0.6);
-    border: 2px solid rgba(96, 165, 250, 0.5);
-    border-radius: 10px;
+}
+
+.ns-stat {
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid rgba(96, 165, 250, 0.6);
+    border-radius: 8px;
+    padding: 10px 15px;
     color: #60a5fa;
     font-size: 18px;
     font-weight: bold;
-    box-shadow: 0 0 20px rgba(96, 165, 250, 0.3);
+    box-shadow: 0 0 15px rgba(96, 165, 250, 0.4);
     backdrop-filter: blur(10px);
 }
 
-.hud-item i {
-    font-size: 20px;
+.ns-label {
+    margin-right: 8px;
 }
 
-.hud-item span {
-    min-width: 40px;
-    text-align: center;
+.ns-value {
+    color: #fff;
 }
 
-.powerup-display {
-    padding: 12px 20px;
-    background: rgba(0, 0, 0, 0.6);
-    border: 2px solid rgba(167, 139, 250, 0.5);
-    border-radius: 10px;
+.ns-powerup-display {
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid rgba(167, 139, 250, 0.6);
+    border-radius: 8px;
+    padding: 10px 15px;
     color: #a78bfa;
     font-size: 16px;
     font-weight: bold;
-    box-shadow: 0 0 20px rgba(167, 139, 250, 0.3);
+    box-shadow: 0 0 15px rgba(167, 139, 250, 0.4);
     backdrop-filter: blur(10px);
     min-width: 150px;
     text-align: center;
-    display: none;
+    animation: ns-powerup-pulse 0.8s ease-in-out infinite;
 }
 
-.powerup-display.active {
-    display: block;
-    animation: powerupPulse 0.5s ease-in-out infinite alternate;
-}
-
-@keyframes powerupPulse {
-    from {
-        box-shadow: 0 0 20px rgba(167, 139, 250, 0.3);
+@keyframes ns-powerup-pulse {
+    0%, 100% {
+        box-shadow: 0 0 15px rgba(167, 139, 250, 0.4);
     }
-    to {
-        box-shadow: 0 0 40px rgba(167, 139, 250, 0.6);
+    50% {
+        box-shadow: 0 0 30px rgba(167, 139, 250, 0.7);
     }
 }
 
-.mobile-controls {
+.ns-mobile-controls {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    display: none;
+    display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    padding: 30px;
+    padding: 20px;
     z-index: 100;
     pointer-events: none;
 }
 
-.mobile-controls.active {
-    display: flex;
-}
-
-.joystick-container {
+.ns-joystick-zone,
+.ns-shoot-zone {
     pointer-events: all;
 }
 
-.joystick-base {
+.ns-joystick-base {
     width: 120px;
     height: 120px;
-    background: rgba(0, 0, 0, 0.4);
-    border: 3px solid rgba(96, 165, 250, 0.5);
+    background: rgba(0, 0, 0, 0.5);
+    border: 3px solid rgba(96, 165, 250, 0.6);
     border-radius: 50%;
     position: relative;
-    box-shadow: 0 0 30px rgba(96, 165, 250, 0.3);
-    backdrop-filter: blur(10px);
+    box-shadow: 0 0 20px rgba(96, 165, 250, 0.4);
 }
 
-.joystick-stick {
+.ns-joystick-stick {
     width: 50px;
     height: 50px;
     background: linear-gradient(135deg, #60a5fa, #a78bfa);
@@ -162,35 +135,31 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    box-shadow: 0 0 20px rgba(96, 165, 250, 0.6);
-    transition: all 0.1s ease;
+    box-shadow: 0 0 15px rgba(96, 165, 250, 0.6);
+    transition: transform 0.1s ease;
 }
 
-.shoot-button {
-    width: 80px;
-    height: 80px;
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.3));
-    border: 3px solid rgba(239, 68, 68, 0.6);
+.ns-shoot-button {
+    width: 90px;
+    height: 90px;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.4), rgba(220, 38, 38, 0.4));
+    border: 3px solid rgba(239, 68, 68, 0.7);
     border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #ef4444;
-    font-size: 30px;
-    box-shadow: 0 0 30px rgba(239, 68, 68, 0.4);
-    pointer-events: all;
+    color: #fff;
+    font-size: 14px;
+    font-weight: bold;
     cursor: pointer;
-    user-select: none;
-    backdrop-filter: blur(10px);
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+    transition: all 0.2s ease;
 }
 
-.shoot-button:active {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.5), rgba(220, 38, 38, 0.5));
-    box-shadow: 0 0 50px rgba(239, 68, 68, 0.7);
+.ns-shoot-button:active {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.7), rgba(220, 38, 38, 0.7));
+    box-shadow: 0 0 40px rgba(239, 68, 68, 0.8);
     transform: scale(0.95);
 }
 
-.shooter-modal {
+.ns-modal {
     position: fixed;
     top: 0;
     left: 0;
@@ -198,28 +167,24 @@
     height: 100%;
     background: rgba(0, 0, 0, 0.9);
     backdrop-filter: blur(15px);
-    display: none;
+    display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
 }
 
-.shooter-modal.active {
-    display: flex;
-}
-
-.shooter-modal-content {
+.ns-modal-content {
     background: linear-gradient(135deg, rgba(20, 20, 40, 0.95), rgba(30, 30, 60, 0.95));
     border: 3px solid rgba(167, 139, 250, 0.6);
     border-radius: 20px;
     padding: 40px;
     max-width: 90%;
     width: 500px;
-    box-shadow: 0 0 60px rgba(167, 139, 250, 0.6);
-    animation: modalSlideIn 0.4s ease-out;
+    box-shadow: 0 0 50px rgba(167, 139, 250, 0.6);
+    animation: ns-modal-appear 0.4s ease-out;
 }
 
-@keyframes modalSlideIn {
+@keyframes ns-modal-appear {
     from {
         opacity: 0;
         transform: scale(0.8) translateY(-50px);
@@ -230,132 +195,90 @@
     }
 }
 
-.modal-title-shooter {
+.ns-title {
     font-size: 2.5rem;
     text-align: center;
-    margin-bottom: 30px;
+    margin-bottom: 25px;
     background: linear-gradient(135deg, #a78bfa 0%, #60a5fa 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    text-shadow: 0 0 30px rgba(167, 139, 250, 0.5);
 }
 
-.instructions {
+.ns-instructions {
     color: #fff;
-    margin-bottom: 30px;
+    margin-bottom: 25px;
+    line-height: 1.8;
 }
 
-.instructions h3 {
-    color: #a78bfa;
-    margin-bottom: 15px;
-    font-size: 1.3rem;
-}
-
-.instructions p {
+.ns-instructions p {
     margin: 10px 0;
-    font-size: 1rem;
-    line-height: 1.6;
 }
 
-.powerups-info {
-    margin-top: 20px;
-    padding: 15px;
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 10px;
-    border: 1px solid rgba(167, 139, 250, 0.3);
+.ns-instructions ul {
+    margin: 10px 0 10px 20px;
 }
 
-.powerups-info h4 {
-    color: #a78bfa;
-    margin-bottom: 10px;
+.ns-instructions li {
+    margin: 5px 0;
 }
 
-.powerup-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 8px 0;
-    font-size: 0.95rem;
+.ns-stats {
+    margin-bottom: 25px;
 }
 
-.powerup-icon {
-    font-size: 1.5rem;
-    width: 30px;
-    text-align: center;
-}
-
-.stats-display {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    margin-bottom: 30px;
-}
-
-.stat-item {
+.ns-stat-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px;
+    padding: 12px;
+    margin: 8px 0;
     background: rgba(0, 0, 0, 0.3);
-    border-radius: 10px;
+    border-radius: 8px;
     border: 1px solid rgba(96, 165, 250, 0.3);
-}
-
-.stat-label {
-    color: #a78bfa;
-    font-size: 1.1rem;
-    font-weight: 600;
-}
-
-.stat-value {
-    color: #60a5fa;
-    font-size: 1.5rem;
-    font-weight: bold;
-}
-
-.modal-buttons-shooter {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.shooter-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 16px 32px;
-    border-radius: 10px;
-    border: 2px solid;
-    font-size: 1.1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-decoration: none;
-}
-
-.start-btn-shooter,
-.restart-btn-shooter {
-    background: linear-gradient(135deg, rgba(138, 43, 226, 0.3), rgba(96, 165, 250, 0.3));
-    border-color: #a78bfa;
     color: #fff;
 }
 
-.start-btn-shooter:hover,
-.restart-btn-shooter:hover {
-    background: linear-gradient(135deg, rgba(138, 43, 226, 0.5), rgba(96, 165, 250, 0.5));
-    box-shadow: 0 0 30px rgba(167, 139, 250, 0.6);
+.ns-highlight {
+    color: #60a5fa;
+    font-size: 1.4rem;
+    font-weight: bold;
+}
+
+.ns-btn {
+    display: block;
+    width: 100%;
+    padding: 15px;
+    margin: 10px 0;
+    border: none;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    text-decoration: none;
+}
+
+.ns-btn-primary {
+    background: linear-gradient(135deg, rgba(138, 43, 226, 0.4), rgba(96, 165, 250, 0.4));
+    border: 2px solid #a78bfa;
+    color: #fff;
+}
+
+.ns-btn-primary:hover {
+    background: linear-gradient(135deg, rgba(138, 43, 226, 0.6), rgba(96, 165, 250, 0.6));
+    box-shadow: 0 0 25px rgba(167, 139, 250, 0.6);
     transform: translateY(-2px);
 }
 
-.home-btn-shooter {
+.ns-btn-secondary {
     background: rgba(30, 30, 60, 0.5);
-    border-color: rgba(167, 139, 250, 0.4);
+    border: 2px solid rgba(167, 139, 250, 0.4);
     color: #a78bfa;
 }
 
-.home-btn-shooter:hover {
+.ns-btn-secondary:hover {
     background: rgba(138, 43, 226, 0.3);
     border-color: #a78bfa;
     box-shadow: 0 0 20px rgba(167, 139, 250, 0.5);
@@ -363,57 +286,36 @@
 }
 
 @media (max-width: 768px) {
-    .shooter-hud {
+    #ns-hud {
         padding: 15px;
     }
 
-    .hud-item {
-        padding: 10px 15px;
+    .ns-stat {
+        padding: 8px 12px;
         font-size: 16px;
     }
 
-    .back-home-btn {
-        width: 45px;
-        height: 45px;
-        font-size: 18px;
-    }
-
-    .modal-title-shooter {
+    .ns-title {
         font-size: 2rem;
     }
 
-    .shooter-modal-content {
+    .ns-modal-content {
         padding: 30px 20px;
     }
 }
 
 @media (max-width: 480px) {
-    .hud-item {
-        padding: 8px 12px;
+    .ns-stat {
+        padding: 6px 10px;
         font-size: 14px;
-        gap: 8px;
     }
 
-    .hud-item i {
-        font-size: 16px;
-    }
-
-    .modal-title-shooter {
+    .ns-title {
         font-size: 1.8rem;
     }
 
-    .instructions p {
-        font-size: 0.9rem;
-    }
-
-    .shooter-btn {
-        padding: 14px 24px;
+    .ns-btn {
+        padding: 12px;
         font-size: 1rem;
-    }
-}
-
-@media (hover: none) and (pointer: coarse) {
-    .mobile-controls {
-        display: flex;
     }
 }
