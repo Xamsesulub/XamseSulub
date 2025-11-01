@@ -17,12 +17,12 @@ const config = {
 };
 
 const pieceValues = {
-    'p': 100,
-    'n': 320,
-    'b': 330,
-    'r': 500,
-    'q': 900,
-    'k': 20000
+    'p': 1,
+    'n': 3,
+    'b': 3,
+    'r': 5,
+    'q': 9,
+    'k': 0
 };
 
 const pawnTable = [
@@ -227,9 +227,12 @@ function getBestMove() {
 
     let bestMove = null;
     let bestScore = -Infinity;
+    const depth = 3;
 
     for (const move of possibleMoves) {
-        const score = evaluateMove(move);
+        game.move(move);
+        const score = -alphaBeta(depth - 1, -Infinity, Infinity, false);
+        game.undo();
 
         if (score > bestScore) {
             bestScore = score;
@@ -241,88 +244,182 @@ function getBestMove() {
     return bestMove;
 }
 
-function evaluateMove(move) {
-    game.move(move);
+function alphaBeta(depth, alpha, beta, isMaximizing) {
+    if (depth === 0 || game.game_over()) {
+        return evaluatePosition();
+    }
+
+    const moves = game.moves({ verbose: true });
+
+    if (isMaximizing) {
+        let maxEval = -Infinity;
+        for (const move of moves) {
+            game.move(move);
+            const evaluation = alphaBeta(depth - 1, alpha, beta, false);
+            game.undo();
+
+            maxEval = Math.max(maxEval, evaluation);
+            alpha = Math.max(alpha, evaluation);
+            if (beta <= alpha) break;
+        }
+        return maxEval;
+    } else {
+        let minEval = Infinity;
+        for (const move of moves) {
+            game.move(move);
+            const evaluation = alphaBeta(depth - 1, alpha, beta, true);
+            game.undo();
+
+            minEval = Math.min(minEval, evaluation);
+            beta = Math.min(beta, evaluation);
+            if (beta <= alpha) break;
+        }
+        return minEval;
+    }
+}
+
+function evaluatePosition() {
+    if (game.in_checkmate()) {
+        return game.turn() === 'b' ? -10000 : 10000;
+    }
+
+    if (game.in_stalemate() || game.in_draw()) {
+        return 0;
+    }
 
     let score = 0;
 
-    if (game.in_checkmate()) {
-        game.undo();
-        return 100000;
-    }
+    score += getMaterialBalance() * 100;
 
-    if (game.in_check()) {
-        score += 500;
-    }
-
-    if (move.captured) {
-        score += pieceValues[move.captured] * 10;
-
-        const isHanging = !isSquareDefended(move.to, 'w');
-        if (isHanging) {
-            score += pieceValues[move.captured] * 5;
+    const boardArray = game.board();
+    for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+            const piece = boardArray[i][j];
+            if (piece) {
+                const positionValue = getPiecePositionValue(piece.type, i, j, piece.color);
+                if (piece.color === 'b') {
+                    score += positionValue;
+                } else {
+                    score -= positionValue;
+                }
+            }
         }
     }
 
-    const beforeMaterial = getMaterialBalance();
-
-    const isMovingPieceSafe = isSquareDefended(move.to, 'b');
-    const isMovingPieceAttacked = isSquareAttacked(move.to, 'w');
-
-    if (isMovingPieceAttacked && !isMovingPieceSafe) {
-        score -= pieceValues[move.piece] * 8;
-    } else if (isMovingPieceAttacked && isMovingPieceSafe) {
-        score -= pieceValues[move.piece] * 2;
+    if (game.in_check()) {
+        score += game.turn() === 'b' ? -30 : 30;
     }
 
-    score += beforeMaterial;
-
     const mobility = game.moves().length;
-    score += mobility * 2;
+    score += game.turn() === 'b' ? mobility * 0.5 : -mobility * 0.5;
 
-    score += evaluatePosition();
-
-    const opponentResponses = evaluateOpponentResponses();
-    score -= opponentResponses;
-
-    game.undo();
+    score += evaluatePawnStructure();
+    score += evaluateKingSafety();
+    score += evaluatePieceSafety();
 
     return score;
 }
 
-function evaluateOpponentResponses() {
-    const responses = game.moves({ verbose: true });
-    let maxThreat = 0;
+function evaluatePawnStructure() {
+    let score = 0;
+    const boardArray = game.board();
 
-    let evaluated = 0;
-    for (const response of responses) {
-        if (evaluated >= 15) break;
+    for (let col = 0; col < 8; col++) {
+        let whitePawns = 0;
+        let blackPawns = 0;
 
-        if (response.captured) {
-            const captureValue = pieceValues[response.captured];
-            maxThreat = Math.max(maxThreat, captureValue * 3);
+        for (let row = 0; row < 8; row++) {
+            const piece = boardArray[row][col];
+            if (piece && piece.type === 'p') {
+                if (piece.color === 'w') whitePawns++;
+                if (piece.color === 'b') blackPawns++;
+            }
         }
 
-        evaluated++;
+        if (whitePawns > 1) score -= 5;
+        if (blackPawns > 1) score += 5;
+
+        if (whitePawns === 1) {
+            let hasSupport = false;
+            if (col > 0 || col < 7) hasSupport = true;
+            if (!hasSupport) score -= 8;
+        }
+
+        if (blackPawns === 1) {
+            let hasSupport = false;
+            if (col > 0 || col < 7) hasSupport = true;
+            if (!hasSupport) score += 8;
+        }
     }
 
-    return maxThreat;
+    return score;
 }
 
-function evaluatePosition() {
+function evaluateKingSafety() {
     let score = 0;
     const boardArray = game.board();
 
     for (let i = 0; i < 8; i++) {
         for (let j = 0; j < 8; j++) {
             const piece = boardArray[i][j];
-            if (piece) {
-                const positionValue = getPiecePositionValue(piece.type, i, j, piece.color);
+            if (piece && piece.type === 'k') {
+                const square = String.fromCharCode(97 + j) + (8 - i);
 
-                if (piece.color === 'b') {
-                    score += positionValue;
+                const pawnShield = countPawnShield(i, j, piece.color);
+
+                if (piece.color === 'w') {
+                    score -= pawnShield * 5;
+                    if (i > 5) score -= 10;
                 } else {
-                    score -= positionValue;
+                    score += pawnShield * 5;
+                    if (i < 2) score += 10;
+                }
+            }
+        }
+    }
+
+    return score;
+}
+
+function countPawnShield(kingRow, kingCol, color) {
+    const boardArray = game.board();
+    let shield = 0;
+
+    const direction = color === 'w' ? -1 : 1;
+    const shieldRow = kingRow + direction;
+
+    if (shieldRow >= 0 && shieldRow < 8) {
+        for (let col = kingCol - 1; col <= kingCol + 1; col++) {
+            if (col >= 0 && col < 8) {
+                const piece = boardArray[shieldRow][col];
+                if (piece && piece.type === 'p' && piece.color === color) {
+                    shield++;
+                }
+            }
+        }
+    }
+
+    return shield;
+}
+
+function evaluatePieceSafety() {
+    let score = 0;
+    const boardArray = game.board();
+
+    for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+            const piece = boardArray[i][j];
+            if (piece && piece.type !== 'k') {
+                const square = String.fromCharCode(97 + j) + (8 - i);
+                const attackedByOpponent = isSquareAttacked(square, piece.color === 'w' ? 'b' : 'w');
+                const defendedByAlly = isSquareDefended(square, piece.color);
+
+                if (attackedByOpponent && !defendedByAlly) {
+                    const penalty = pieceValues[piece.type] * 40;
+                    score += piece.color === 'b' ? -penalty : penalty;
+                } else if (attackedByOpponent && defendedByAlly) {
+                    const penalty = pieceValues[piece.type] * 5;
+                    score += piece.color === 'b' ? -penalty : penalty;
                 }
             }
         }
@@ -451,14 +548,14 @@ function updateMaterialScore() {
     const scoreEl = document.getElementById('materialScore');
 
     if (diff > 0) {
-        scoreEl.textContent = `Score: +${Math.round(diff / 100)}`;
-        scoreEl.style.color = '#60a5fa';
+        scoreEl.textContent = `Score: +${diff}`;
+        scoreEl.style.color = '#4ade80';
     } else if (diff < 0) {
-        scoreEl.textContent = `Score: ${Math.round(diff / 100)}`;
-        scoreEl.style.color = '#ef4444';
+        scoreEl.textContent = `Score: ${diff}`;
+        scoreEl.style.color = '#f87171';
     } else {
         scoreEl.textContent = 'Score: 0';
-        scoreEl.style.color = '#a78bfa';
+        scoreEl.style.color = '#ccc';
     }
 }
 
