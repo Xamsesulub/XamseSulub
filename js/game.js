@@ -1,4 +1,4 @@
-const BOARD_SIZE = 5;
+const BOARD_SIZE = 7;
 const PLAYER = 'player';
 const CPU = 'cpu';
 
@@ -7,8 +7,10 @@ let gameState = {
     selectedCell: null,
     currentTurn: PLAYER,
     isGameOver: false,
-    playerPieces: 3,
-    cpuPieces: 3
+    playerPieces: 4,
+    cpuPieces: 4,
+    turnsWithoutCapture: 0,
+    boardHistory: []
 };
 
 function initGame() {
@@ -17,18 +19,23 @@ function initGame() {
         selectedCell: null,
         currentTurn: PLAYER,
         isGameOver: false,
-        playerPieces: 3,
-        cpuPieces: 3
+        playerPieces: 4,
+        cpuPieces: 4,
+        turnsWithoutCapture: 0,
+        boardHistory: []
     };
 
-    gameState.board[0][1] = PLAYER;
-    gameState.board[0][2] = PLAYER;
-    gameState.board[0][3] = PLAYER;
+    gameState.board[6][2] = PLAYER;
+    gameState.board[6][3] = PLAYER;
+    gameState.board[6][4] = PLAYER;
+    gameState.board[6][5] = PLAYER;
 
-    gameState.board[4][1] = CPU;
-    gameState.board[4][2] = CPU;
-    gameState.board[4][3] = CPU;
+    gameState.board[0][2] = CPU;
+    gameState.board[0][3] = CPU;
+    gameState.board[0][4] = CPU;
+    gameState.board[0][5] = CPU;
 
+    saveBoardState();
     renderBoard();
     updateUI();
 }
@@ -149,16 +156,26 @@ function isValidMove(fromRow, fromCol, toRow, toCol) {
 
 function makeMove(fromRow, fromCol, toRow, toCol, player) {
     const targetPiece = gameState.board[toRow][toCol];
+    let captureOccurred = false;
 
     if (targetPiece === CPU && player === PLAYER) {
         gameState.cpuPieces--;
+        captureOccurred = true;
     } else if (targetPiece === PLAYER && player === CPU) {
         gameState.playerPieces--;
+        captureOccurred = true;
     }
 
     gameState.board[toRow][toCol] = player;
     gameState.board[fromRow][fromCol] = null;
 
+    if (captureOccurred) {
+        gameState.turnsWithoutCapture = 0;
+    } else {
+        gameState.turnsWithoutCapture++;
+    }
+
+    saveBoardState();
     renderBoard();
     updateUI();
 }
@@ -311,6 +328,18 @@ function checkGameOver() {
         return true;
     }
 
+    if (gameState.turnsWithoutCapture >= 20) {
+        showGameOver('Draw! No clear winner.');
+        gameState.isGameOver = true;
+        return true;
+    }
+
+    if (checkBoardRepetition()) {
+        showGameOver('Draw! No clear winner.');
+        gameState.isGameOver = true;
+        return true;
+    }
+
     return false;
 }
 
@@ -331,6 +360,24 @@ function updateUI() {
     } else {
         turnIndicator.textContent = 'CPU Thinking...';
     }
+}
+
+function saveBoardState() {
+    const boardString = JSON.stringify(gameState.board);
+    gameState.boardHistory.push(boardString);
+}
+
+function checkBoardRepetition() {
+    const currentBoard = JSON.stringify(gameState.board);
+    let count = 0;
+
+    for (const board of gameState.boardHistory) {
+        if (board === currentBoard) {
+            count++;
+        }
+    }
+
+    return count >= 3;
 }
 
 document.getElementById('restartBtn').addEventListener('click', () => {
