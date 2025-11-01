@@ -129,10 +129,52 @@ body {
     font-weight: 600;
 }
 
-.piece-count {
+.timer {
     font-size: 1.5rem;
     font-weight: bold;
     color: #a78bfa;
+    font-family: 'Courier New', monospace;
+}
+
+.timer.warning {
+    color: #fbbf24;
+    animation: timerWarning 1s ease-in-out infinite;
+}
+
+.timer.critical {
+    color: #ef4444;
+    animation: timerCritical 0.5s ease-in-out infinite;
+}
+
+@keyframes timerWarning {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
+}
+
+@keyframes timerCritical {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(1.05);
+    }
+}
+
+.material-score {
+    text-align: center;
+    padding: 12px;
+    background: rgba(138, 43, 226, 0.2);
+    border-radius: 8px;
+    border: 2px solid rgba(167, 139, 250, 0.3);
+    font-size: 1.1rem;
+    color: #a78bfa;
+    font-weight: 600;
 }
 
 .turn-indicator {
@@ -381,7 +423,7 @@ body {
         font-size: 1rem;
     }
 
-    .piece-count {
+    .timer {
         font-size: 1.3rem;
     }
 
