@@ -6,6 +6,7 @@
     <title>Cyber Chess - Xamse Portfolio</title>
     <link rel="stylesheet" href="../css/game.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
 </head>
 <body>
     <div class="game-container">
@@ -21,16 +22,17 @@
                 <div class="player-info">
                     <div class="info-card player-card">
                         <i class="fas fa-user"></i>
-                        <span>Player</span>
-                        <span class="piece-count" id="playerCount">4</span>
+                        <span>White (You)</span>
+                        <span class="piece-count" id="playerCount">16</span>
                     </div>
                     <div class="info-card cpu-card">
                         <i class="fas fa-robot"></i>
-                        <span>CPU</span>
-                        <span class="piece-count" id="cpuCount">4</span>
+                        <span>Black (CPU)</span>
+                        <span class="piece-count" id="cpuCount">16</span>
                     </div>
                 </div>
                 <div class="turn-indicator" id="turnIndicator">Your Turn</div>
+                <div class="game-status" id="gameStatus"></div>
             </div>
 
             <div class="board-container">
@@ -42,6 +44,7 @@
     <div id="gameModal" class="modal">
         <div class="modal-content">
             <h2 id="modalTitle" class="modal-title"></h2>
+            <p id="modalMessage" class="modal-message"></p>
             <div class="modal-buttons">
                 <button id="restartBtn" class="modal-btn restart-btn">
                     <i class="fas fa-redo"></i> Restart Game
@@ -53,6 +56,22 @@
         </div>
     </div>
 
+    <div id="promotionModal" class="modal">
+        <div class="modal-content">
+            <h2 class="modal-title">Promote Pawn</h2>
+            <p class="modal-message">Choose a piece:</p>
+            <div class="promotion-pieces">
+                <button class="promotion-btn" data-piece="q">♛ Queen</button>
+                <button class="promotion-btn" data-piece="r">♜ Rook</button>
+                <button class="promotion-btn" data-piece="b">♝ Bishop</button>
+                <button class="promotion-btn" data-piece="n">♞ Knight</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.1/chess.min.js"></script>
     <script src="../js/game.js"></script>
 </body>
 </html>
