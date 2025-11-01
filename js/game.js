@@ -201,8 +201,10 @@ function makeComputerMove() {
     updateTurnIndicator('CPU Thinking...');
 
     setTimeout(() => {
-        const move = getBestMove(3);
+        console.log('AI evaluating moves...');
+        const move = getBestMove();
         if (move) {
+            console.log('AI selected move:', move.san);
             game.move(move);
             board.position(game.fen());
             currentTimer = 'white';
@@ -217,69 +219,97 @@ function makeComputerMove() {
     }, 300);
 }
 
-function getBestMove(depth) {
+function getBestMove() {
     const possibleMoves = game.moves({ verbose: true });
     if (possibleMoves.length === 0) return null;
+
+    console.log('AI evaluating moves...', possibleMoves.map(m => m.san));
 
     let bestMove = null;
     let bestScore = -Infinity;
 
-    possibleMoves.forEach(move => {
-        game.move(move);
-        const score = -minimax(depth - 1, -Infinity, Infinity, false);
-        game.undo();
+    for (const move of possibleMoves) {
+        const score = evaluateMove(move);
 
         if (score > bestScore) {
             bestScore = score;
             bestMove = move;
         }
-    });
+    }
 
+    console.log('Best move selected:', bestMove.san, 'Score:', bestScore);
     return bestMove;
 }
 
-function minimax(depth, alpha, beta, isMaximizing) {
-    if (depth === 0 || game.game_over()) {
-        return evaluatePosition();
+function evaluateMove(move) {
+    game.move(move);
+
+    let score = 0;
+
+    if (game.in_checkmate()) {
+        game.undo();
+        return 100000;
     }
 
-    const moves = game.moves({ verbose: true });
-
-    if (isMaximizing) {
-        let maxEval = -Infinity;
-        for (const move of moves) {
-            game.move(move);
-            const evaluation = minimax(depth - 1, alpha, beta, false);
-            game.undo();
-            maxEval = Math.max(maxEval, evaluation);
-            alpha = Math.max(alpha, evaluation);
-            if (beta <= alpha) break;
-        }
-        return maxEval;
-    } else {
-        let minEval = Infinity;
-        for (const move of moves) {
-            game.move(move);
-            const evaluation = minimax(depth - 1, alpha, beta, true);
-            game.undo();
-            minEval = Math.min(minEval, evaluation);
-            beta = Math.min(beta, evaluation);
-            if (beta <= alpha) break;
-        }
-        return minEval;
+    if (game.in_check()) {
+        score += 500;
     }
+
+    if (move.captured) {
+        score += pieceValues[move.captured] * 10;
+
+        const isHanging = !isSquareDefended(move.to, 'w');
+        if (isHanging) {
+            score += pieceValues[move.captured] * 5;
+        }
+    }
+
+    const beforeMaterial = getMaterialBalance();
+
+    const isMovingPieceSafe = isSquareDefended(move.to, 'b');
+    const isMovingPieceAttacked = isSquareAttacked(move.to, 'w');
+
+    if (isMovingPieceAttacked && !isMovingPieceSafe) {
+        score -= pieceValues[move.piece] * 8;
+    } else if (isMovingPieceAttacked && isMovingPieceSafe) {
+        score -= pieceValues[move.piece] * 2;
+    }
+
+    score += beforeMaterial;
+
+    const mobility = game.moves().length;
+    score += mobility * 2;
+
+    score += evaluatePosition();
+
+    const opponentResponses = evaluateOpponentResponses();
+    score -= opponentResponses;
+
+    game.undo();
+
+    return score;
+}
+
+function evaluateOpponentResponses() {
+    const responses = game.moves({ verbose: true });
+    let maxThreat = 0;
+
+    let evaluated = 0;
+    for (const response of responses) {
+        if (evaluated >= 15) break;
+
+        if (response.captured) {
+            const captureValue = pieceValues[response.captured];
+            maxThreat = Math.max(maxThreat, captureValue * 3);
+        }
+
+        evaluated++;
+    }
+
+    return maxThreat;
 }
 
 function evaluatePosition() {
-    if (game.in_checkmate()) {
-        return game.turn() === 'b' ? 100000 : -100000;
-    }
-
-    if (game.in_stalemate() || game.in_draw() ||
-        game.in_threefold_repetition() || game.insufficient_material()) {
-        return 0;
-    }
-
     let score = 0;
     const boardArray = game.board();
 
@@ -287,29 +317,40 @@ function evaluatePosition() {
         for (let j = 0; j < 8; j++) {
             const piece = boardArray[i][j];
             if (piece) {
-                const pieceValue = pieceValues[piece.type];
                 const positionValue = getPiecePositionValue(piece.type, i, j, piece.color);
-                const totalValue = pieceValue + positionValue;
 
                 if (piece.color === 'b') {
-                    score += totalValue;
+                    score += positionValue;
                 } else {
-                    score -= totalValue;
+                    score -= positionValue;
                 }
             }
         }
     }
 
-    if (game.in_check()) {
-        score += game.turn() === 'b' ? -50 : 50;
+    return score;
+}
+
+function getMaterialBalance() {
+    let whiteScore = 0;
+    let blackScore = 0;
+    const boardArray = game.board();
+
+    for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+            const piece = boardArray[i][j];
+            if (piece && piece.type !== 'k') {
+                const value = pieceValues[piece.type];
+                if (piece.color === 'w') {
+                    whiteScore += value;
+                } else {
+                    blackScore += value;
+                }
+            }
+        }
     }
 
-    const mobility = game.moves().length;
-    score += game.turn() === 'b' ? mobility * 3 : -mobility * 3;
-
-    score += evaluatePieceSafety();
-
-    return score;
+    return blackScore - whiteScore;
 }
 
 function getPiecePositionValue(pieceType, row, col, color) {
@@ -317,63 +358,32 @@ function getPiecePositionValue(pieceType, row, col, color) {
 
     switch (pieceType) {
         case 'p':
-            return pawnTable[index];
+            return pawnTable[index] * 0.3;
         case 'n':
-            return knightTable[index];
+            return knightTable[index] * 0.5;
         case 'b':
-            return bishopTable[index];
+            return bishopTable[index] * 0.5;
         case 'k':
-            return kingMiddleTable[index];
+            return kingMiddleTable[index] * 0.3;
         default:
             return 0;
     }
 }
 
-function evaluatePieceSafety() {
-    let safetyScore = 0;
-    const boardArray = game.board();
-    const turn = game.turn();
-
-    for (let i = 0; i < 8; i++) {
-        for (let j = 0; j < 8; j++) {
-            const piece = boardArray[i][j];
-            if (piece) {
-                const square = String.fromCharCode(97 + j) + (8 - i);
-                const isAttacked = isSquareAttacked(square, piece.color === 'w' ? 'b' : 'w');
-                const isDefended = isSquareAttacked(square, piece.color);
-
-                if (isAttacked && !isDefended) {
-                    const penalty = pieceValues[piece.type] * 0.5;
-                    safetyScore += piece.color === 'b' ? -penalty : penalty;
-                } else if (isAttacked && isDefended) {
-                    const penalty = pieceValues[piece.type] * 0.1;
-                    safetyScore += piece.color === 'b' ? -penalty : penalty;
-                }
-            }
-        }
-    }
-
-    return turn === 'b' ? safetyScore : -safetyScore;
+function isSquareDefended(square, byColor) {
+    const moves = game.moves({ verbose: true, square: square });
+    return moves.some(m => {
+        const piece = game.get(m.from);
+        return piece && piece.color === byColor;
+    });
 }
 
 function isSquareAttacked(square, byColor) {
-    const originalTurn = game.turn();
-
-    const fen = game.fen();
-    const parts = fen.split(' ');
-    parts[1] = byColor === 'w' ? 'w' : 'b';
-    const modifiedFen = parts.join(' ');
-
-    try {
-        game.load(modifiedFen);
-        const moves = game.moves({ verbose: true });
-        const isAttacked = moves.some(m => m.to === square);
-        game.load(fen);
-        return isAttacked;
-    } catch (e) {
-        game.load(fen);
-        return false;
-    }
+    const allMoves = game.moves({ verbose: true });
+    return allMoves.some(m => {
+        const piece = game.get(m.from);
+        return piece && piece.color === byColor && m.to === square;
+    });
 }
 
 function updateStatus() {
