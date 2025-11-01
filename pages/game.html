@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Chess - Xamse Portfolio</title>
+    <link rel="stylesheet" href="../css/game.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <div class="game-container">
+        <header class="game-header">
+            <a href="../index.html" class="back-btn">
+                <i class="fas fa-arrow-left"></i> Back to Portfolio
+            </a>
+            <h1 class="game-title">Cyber Chess</h1>
+        </header>
+
+        <div class="game-content">
+            <div class="game-info">
+                <div class="player-info">
+                    <div class="info-card player-card">
+                        <i class="fas fa-user"></i>
+                        <span>Player</span>
+                        <span class="piece-count" id="playerCount">3</span>
+                    </div>
+                    <div class="info-card cpu-card">
+                        <i class="fas fa-robot"></i>
+                        <span>CPU</span>
+                        <span class="piece-count" id="cpuCount">3</span>
+                    </div>
+                </div>
+                <div class="turn-indicator" id="turnIndicator">Your Turn</div>
+            </div>
+
+            <div class="board-container">
+                <div id="gameBoard" class="game-board"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="gameModal" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitle" class="modal-title"></h2>
+            <div class="modal-buttons">
+                <button id="restartBtn" class="modal-btn restart-btn">
+                    <i class="fas fa-redo"></i> Restart Game
+                </button>
+                <a href="../index.html" class="modal-btn home-btn">
+                    <i class="fas fa-home"></i> Back to Home
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/game.js"></script>
+</body>
+</html>
