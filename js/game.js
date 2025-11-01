@@ -187,10 +187,17 @@ function cpuTurn() {
             let score = 0;
 
             if (gameState.board[move.row][move.col] === PLAYER) {
-                score = 100;
+                score = 1000;
             } else {
                 const distanceToPlayer = getMinDistanceToPlayer(move.row, move.col);
-                score = 50 - distanceToPlayer * 5;
+                score = 100 - distanceToPlayer * 10;
+
+                const capturePathLength = getShortestCapturePathLength(move.row, move.col);
+                score += (10 - capturePathLength);
+
+                if (isInDanger(move.row, move.col)) {
+                    score -= 50;
+                }
             }
 
             if (score > bestScore) {
@@ -213,6 +220,43 @@ function cpuTurn() {
         gameState.currentTurn = PLAYER;
         updateUI();
     }
+}
+
+function getShortestCapturePathLength(cpuRow, cpuCol) {
+    let minPath = Infinity;
+
+    for (let row = 0; row < BOARD_SIZE; row++) {
+        for (let col = 0; col < BOARD_SIZE; col++) {
+            if (gameState.board[row][col] === PLAYER) {
+                const pathLength = Math.max(Math.abs(row - cpuRow), Math.abs(col - cpuCol));
+                minPath = Math.min(minPath, pathLength);
+            }
+        }
+    }
+
+    return minPath;
+}
+
+function isInDanger(row, col) {
+    const directions = [
+        [-1, -1], [-1, 0], [-1, 1],
+        [0, -1],           [0, 1],
+        [1, -1],  [1, 0],  [1, 1]
+    ];
+
+    for (const [dRow, dCol] of directions) {
+        const newRow = row + dRow;
+        const newCol = col + dCol;
+
+        if (newRow >= 0 && newRow < BOARD_SIZE &&
+            newCol >= 0 && newCol < BOARD_SIZE) {
+            if (gameState.board[newRow][newCol] === PLAYER) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 function getValidMoves(row, col) {
