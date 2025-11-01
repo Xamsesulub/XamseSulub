@@ -1,389 +1,580 @@
-const BOARD_SIZE = 7;
-const PLAYER = 'player';
-const CPU = 'cpu';
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
 
-let gameState = {
-    board: [],
-    selectedCell: null,
-    currentTurn: PLAYER,
-    isGameOver: false,
-    playerPieces: 4,
-    cpuPieces: 4,
-    turnsWithoutCapture: 0,
-    boardHistory: []
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+});
+
+const gameState = {
+    isRunning: false,
+    score: 0,
+    health: 3,
+    enemiesKilled: 0,
+    difficulty: 1,
+    lastScoreTime: 0,
+    powerup: null,
+    powerupEndTime: 0
 };
 
-function initGame() {
-    gameState = {
-        board: Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null)),
-        selectedCell: null,
-        currentTurn: PLAYER,
-        isGameOver: false,
-        playerPieces: 4,
-        cpuPieces: 4,
-        turnsWithoutCapture: 0,
-        boardHistory: []
-    };
+const player = {
+    x: canvas.width / 2,
+    y: canvas.height / 2,
+    radius: 15,
+    speed: 5,
+    color: '#60a5fa',
+    dx: 0,
+    dy: 0
+};
 
-    gameState.board[6][2] = PLAYER;
-    gameState.board[6][3] = PLAYER;
-    gameState.board[6][4] = PLAYER;
-    gameState.board[6][5] = PLAYER;
+const keys = {
+    w: false,
+    a: false,
+    s: false,
+    d: false,
+    ArrowUp: false,
+    ArrowLeft: false,
+    ArrowDown: false,
+    ArrowRight: false,
+    space: false
+};
 
-    gameState.board[0][2] = CPU;
-    gameState.board[0][3] = CPU;
-    gameState.board[0][4] = CPU;
-    gameState.board[0][5] = CPU;
+let projectiles = [];
+let enemies = [];
+let powerups = [];
+let particles = [];
 
-    saveBoardState();
-    renderBoard();
-    updateUI();
+let lastShootTime = 0;
+const shootCooldown = 250;
+let enemySpawnRate = 2000;
+let lastEnemySpawn = 0;
+
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+if (isMobile) {
+    document.getElementById('mobileControls').classList.add('active');
 }
 
-function renderBoard() {
-    const boardElement = document.getElementById('gameBoard');
-    boardElement.innerHTML = '';
-
-    for (let row = 0; row < BOARD_SIZE; row++) {
-        for (let col = 0; col < BOARD_SIZE; col++) {
-            const cell = document.createElement('div');
-            cell.className = 'cell';
-            cell.dataset.row = row;
-            cell.dataset.col = col;
-
-            const piece = gameState.board[row][col];
-            if (piece === PLAYER) {
-                cell.classList.add('player');
-                cell.innerHTML = '<i class="fas fa-chess-pawn"></i>';
-            } else if (piece === CPU) {
-                cell.classList.add('cpu');
-                cell.innerHTML = '<i class="fas fa-robot"></i>';
-            }
-
-            if (gameState.selectedCell &&
-                gameState.selectedCell.row === row &&
-                gameState.selectedCell.col === col) {
-                cell.classList.add('selected');
-            }
-
-            cell.addEventListener('click', () => handleCellClick(row, col));
-            boardElement.appendChild(cell);
-        }
+document.addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() in keys) {
+        keys[e.key.toLowerCase()] = true;
     }
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        keys[e.key] = true;
+        e.preventDefault();
+    }
+    if (e.key === ' ') {
+        keys.space = true;
+        e.preventDefault();
+    }
+});
+
+document.addEventListener('keyup', (e) => {
+    if (e.key.toLowerCase() in keys) {
+        keys[e.key.toLowerCase()] = false;
+    }
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        keys[e.key] = false;
+    }
+    if (e.key === ' ') {
+        keys.space = false;
+    }
+});
+
+canvas.addEventListener('click', (e) => {
+    if (!gameState.isRunning) return;
+    const angle = Math.atan2(e.clientY - player.y, e.clientX - player.x);
+    shoot(angle);
+});
+
+let joystickActive = false;
+let joystickAngle = 0;
+let joystickDistance = 0;
+
+const joystickBase = document.querySelector('.joystick-base');
+const joystickStick = document.getElementById('joystickStick');
+
+joystickBase.addEventListener('touchstart', handleJoystickStart);
+joystickBase.addEventListener('touchmove', handleJoystickMove);
+joystickBase.addEventListener('touchend', handleJoystickEnd);
+
+function handleJoystickStart(e) {
+    e.preventDefault();
+    joystickActive = true;
 }
 
-function handleCellClick(row, col) {
-    if (gameState.isGameOver || gameState.currentTurn !== PLAYER) {
-        return;
-    }
+function handleJoystickMove(e) {
+    if (!joystickActive) return;
+    e.preventDefault();
 
-    const clickedPiece = gameState.board[row][col];
+    const touch = e.touches[0];
+    const rect = joystickBase.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
 
-    if (gameState.selectedCell) {
-        if (gameState.selectedCell.row === row && gameState.selectedCell.col === col) {
-            gameState.selectedCell = null;
-            renderBoard();
-            return;
-        }
+    const dx = touch.clientX - centerX;
+    const dy = touch.clientY - centerY;
 
-        if (isValidMove(gameState.selectedCell.row, gameState.selectedCell.col, row, col)) {
-            makeMove(gameState.selectedCell.row, gameState.selectedCell.col, row, col, PLAYER);
-            gameState.selectedCell = null;
+    const distance = Math.min(Math.sqrt(dx * dx + dy * dy), 35);
+    joystickDistance = distance / 35;
+    joystickAngle = Math.atan2(dy, dx);
 
-            if (checkGameOver()) {
-                return;
-            }
+    const stickX = Math.cos(joystickAngle) * distance;
+    const stickY = Math.sin(joystickAngle) * distance;
 
-            gameState.currentTurn = CPU;
-            updateUI();
+    joystickStick.style.transform = `translate(calc(-50% + ${stickX}px), calc(-50% + ${stickY}px))`;
+}
 
-            setTimeout(() => {
-                cpuTurn();
-            }, 800);
-        } else {
-            gameState.selectedCell = null;
-            renderBoard();
-        }
+function handleJoystickEnd(e) {
+    e.preventDefault();
+    joystickActive = false;
+    joystickDistance = 0;
+    joystickStick.style.transform = 'translate(-50%, -50%)';
+}
+
+const shootButton = document.getElementById('shootButton');
+let shootButtonPressed = false;
+
+shootButton.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    shootButtonPressed = true;
+});
+
+shootButton.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    shootButtonPressed = false;
+});
+
+function updatePlayer() {
+    player.dx = 0;
+    player.dy = 0;
+
+    if (joystickActive) {
+        player.dx = Math.cos(joystickAngle) * joystickDistance * player.speed;
+        player.dy = Math.sin(joystickAngle) * joystickDistance * player.speed;
     } else {
-        if (clickedPiece === PLAYER) {
-            gameState.selectedCell = { row, col };
-            renderBoard();
-            highlightValidMoves(row, col);
+        if (keys.w || keys.ArrowUp) player.dy = -player.speed;
+        if (keys.s || keys.ArrowDown) player.dy = player.speed;
+        if (keys.a || keys.ArrowLeft) player.dx = -player.speed;
+        if (keys.d || keys.ArrowRight) player.dx = player.speed;
+    }
+
+    if (player.dx !== 0 && player.dy !== 0) {
+        player.dx *= 0.707;
+        player.dy *= 0.707;
+    }
+
+    player.x += player.dx;
+    player.y += player.dy;
+
+    player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+    player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+}
+
+function shoot(angle) {
+    const now = Date.now();
+    const cooldown = gameState.powerup === 'rapid' ? 100 : shootCooldown;
+
+    if (now - lastShootTime < cooldown) return;
+
+    lastShootTime = now;
+
+    projectiles.push({
+        x: player.x,
+        y: player.y,
+        radius: 5,
+        speed: 10,
+        angle: angle,
+        color: '#60a5fa'
+    });
+}
+
+function autoShoot() {
+    if (keys.space || shootButtonPressed) {
+        if (enemies.length > 0) {
+            const nearestEnemy = enemies.reduce((nearest, enemy) => {
+                const dist = Math.hypot(enemy.x - player.x, enemy.y - player.y);
+                const nearestDist = Math.hypot(nearest.x - player.x, nearest.y - player.y);
+                return dist < nearestDist ? enemy : nearest;
+            });
+
+            const angle = Math.atan2(nearestEnemy.y - player.y, nearestEnemy.x - player.x);
+            shoot(angle);
+        } else {
+            shoot(0);
         }
     }
 }
 
-function highlightValidMoves(row, col) {
-    const directions = [
-        [-1, -1], [-1, 0], [-1, 1],
-        [0, -1],           [0, 1],
-        [1, -1],  [1, 0],  [1, 1]
-    ];
+function spawnEnemy() {
+    const now = Date.now();
 
-    directions.forEach(([dRow, dCol]) => {
-        const newRow = row + dRow;
-        const newCol = col + dCol;
+    const adjustedSpawnRate = enemySpawnRate / gameState.difficulty;
 
-        if (newRow >= 0 && newRow < BOARD_SIZE &&
-            newCol >= 0 && newCol < BOARD_SIZE) {
-            const targetPiece = gameState.board[newRow][newCol];
-            if (targetPiece !== PLAYER) {
-                const cells = document.querySelectorAll('.cell');
-                const cellIndex = newRow * BOARD_SIZE + newCol;
-                cells[cellIndex].classList.add('valid-move');
+    if (now - lastEnemySpawn < adjustedSpawnRate) return;
+
+    lastEnemySpawn = now;
+
+    const side = Math.floor(Math.random() * 4);
+    let x, y;
+
+    switch (side) {
+        case 0:
+            x = Math.random() * canvas.width;
+            y = -20;
+            break;
+        case 1:
+            x = canvas.width + 20;
+            y = Math.random() * canvas.height;
+            break;
+        case 2:
+            x = Math.random() * canvas.width;
+            y = canvas.height + 20;
+            break;
+        case 3:
+            x = -20;
+            y = Math.random() * canvas.height;
+            break;
+    }
+
+    const baseSpeed = 1.5;
+    const speed = baseSpeed + (gameState.difficulty - 1) * 0.3;
+
+    enemies.push({
+        x: x,
+        y: y,
+        radius: 12,
+        speed: speed,
+        color: '#ef4444',
+        health: 1
+    });
+}
+
+function spawnPowerup() {
+    if (Math.random() < 0.005) {
+        const types = ['shield', 'rapid', 'slow'];
+        const type = types[Math.floor(Math.random() * types.length)];
+
+        powerups.push({
+            x: Math.random() * (canvas.width - 60) + 30,
+            y: Math.random() * (canvas.height - 60) + 30,
+            radius: 15,
+            type: type,
+            rotation: 0
+        });
+    }
+}
+
+function updateEnemies() {
+    const speedMultiplier = gameState.powerup === 'slow' ? 0.3 : 1;
+
+    enemies.forEach((enemy, index) => {
+        const angle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
+        enemy.x += Math.cos(angle) * enemy.speed * speedMultiplier;
+        enemy.y += Math.sin(angle) * enemy.speed * speedMultiplier;
+
+        const dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
+        if (dist < player.radius + enemy.radius) {
+            if (gameState.powerup === 'shield') {
+                gameState.powerup = null;
+                updatePowerupDisplay();
+                enemies.splice(index, 1);
+                createExplosion(enemy.x, enemy.y, '#60a5fa');
+            } else {
+                gameState.health--;
+                updateHUD();
+                enemies.splice(index, 1);
+                createExplosion(player.x, player.y, '#ef4444');
+
+                if (gameState.health <= 0) {
+                    endGame();
+                }
             }
         }
     });
 }
 
-function isValidMove(fromRow, fromCol, toRow, toCol) {
-    const rowDiff = Math.abs(toRow - fromRow);
-    const colDiff = Math.abs(toCol - fromCol);
+function updateProjectiles() {
+    projectiles.forEach((projectile, pIndex) => {
+        projectile.x += Math.cos(projectile.angle) * projectile.speed;
+        projectile.y += Math.sin(projectile.angle) * projectile.speed;
 
-    if (rowDiff > 1 || colDiff > 1) {
-        return false;
-    }
-
-    const targetPiece = gameState.board[toRow][toCol];
-    const movingPiece = gameState.board[fromRow][fromCol];
-
-    if (targetPiece === movingPiece) {
-        return false;
-    }
-
-    return true;
-}
-
-function makeMove(fromRow, fromCol, toRow, toCol, player) {
-    const targetPiece = gameState.board[toRow][toCol];
-    let captureOccurred = false;
-
-    if (targetPiece === CPU && player === PLAYER) {
-        gameState.cpuPieces--;
-        captureOccurred = true;
-    } else if (targetPiece === PLAYER && player === CPU) {
-        gameState.playerPieces--;
-        captureOccurred = true;
-    }
-
-    gameState.board[toRow][toCol] = player;
-    gameState.board[fromRow][fromCol] = null;
-
-    if (captureOccurred) {
-        gameState.turnsWithoutCapture = 0;
-    } else {
-        gameState.turnsWithoutCapture++;
-    }
-
-    saveBoardState();
-    renderBoard();
-    updateUI();
-}
-
-function cpuTurn() {
-    if (gameState.isGameOver) {
-        return;
-    }
-
-    const cpuPieces = [];
-    for (let row = 0; row < BOARD_SIZE; row++) {
-        for (let col = 0; col < BOARD_SIZE; col++) {
-            if (gameState.board[row][col] === CPU) {
-                cpuPieces.push({ row, col });
-            }
+        if (projectile.x < 0 || projectile.x > canvas.width ||
+            projectile.y < 0 || projectile.y > canvas.height) {
+            projectiles.splice(pIndex, 1);
+            return;
         }
-    }
 
-    let bestMove = null;
-    let bestScore = -Infinity;
-
-    cpuPieces.forEach(piece => {
-        const validMoves = getValidMoves(piece.row, piece.col);
-
-        validMoves.forEach(move => {
-            let score = 0;
-
-            if (gameState.board[move.row][move.col] === PLAYER) {
-                score = 1000;
-            } else {
-                const distanceToPlayer = getMinDistanceToPlayer(move.row, move.col);
-                score = 100 - distanceToPlayer * 10;
-
-                const capturePathLength = getShortestCapturePathLength(move.row, move.col);
-                score += (10 - capturePathLength);
-
-                if (isInDanger(move.row, move.col)) {
-                    score -= 50;
+        enemies.forEach((enemy, eIndex) => {
+            const dist = Math.hypot(enemy.x - projectile.x, enemy.y - projectile.y);
+            if (dist < enemy.radius + projectile.radius) {
+                enemy.health--;
+                if (enemy.health <= 0) {
+                    gameState.score += 5;
+                    gameState.enemiesKilled++;
+                    updateHUD();
+                    enemies.splice(eIndex, 1);
+                    createExplosion(enemy.x, enemy.y, '#ef4444');
                 }
-            }
-
-            if (score > bestScore) {
-                bestScore = score;
-                bestMove = {
-                    from: piece,
-                    to: move
-                };
+                projectiles.splice(pIndex, 1);
             }
         });
     });
-
-    if (bestMove) {
-        makeMove(bestMove.from.row, bestMove.from.col, bestMove.to.row, bestMove.to.col, CPU);
-
-        if (checkGameOver()) {
-            return;
-        }
-
-        gameState.currentTurn = PLAYER;
-        updateUI();
-    }
 }
 
-function getShortestCapturePathLength(cpuRow, cpuCol) {
-    let minPath = Infinity;
+function updatePowerups() {
+    powerups.forEach((powerup, index) => {
+        powerup.rotation += 0.05;
 
-    for (let row = 0; row < BOARD_SIZE; row++) {
-        for (let col = 0; col < BOARD_SIZE; col++) {
-            if (gameState.board[row][col] === PLAYER) {
-                const pathLength = Math.max(Math.abs(row - cpuRow), Math.abs(col - cpuCol));
-                minPath = Math.min(minPath, pathLength);
-            }
-        }
-    }
-
-    return minPath;
-}
-
-function isInDanger(row, col) {
-    const directions = [
-        [-1, -1], [-1, 0], [-1, 1],
-        [0, -1],           [0, 1],
-        [1, -1],  [1, 0],  [1, 1]
-    ];
-
-    for (const [dRow, dCol] of directions) {
-        const newRow = row + dRow;
-        const newCol = col + dCol;
-
-        if (newRow >= 0 && newRow < BOARD_SIZE &&
-            newCol >= 0 && newCol < BOARD_SIZE) {
-            if (gameState.board[newRow][newCol] === PLAYER) {
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-
-function getValidMoves(row, col) {
-    const moves = [];
-    const directions = [
-        [-1, -1], [-1, 0], [-1, 1],
-        [0, -1],           [0, 1],
-        [1, -1],  [1, 0],  [1, 1]
-    ];
-
-    directions.forEach(([dRow, dCol]) => {
-        const newRow = row + dRow;
-        const newCol = col + dCol;
-
-        if (newRow >= 0 && newRow < BOARD_SIZE &&
-            newCol >= 0 && newCol < BOARD_SIZE) {
-            const targetPiece = gameState.board[newRow][newCol];
-            if (targetPiece !== CPU) {
-                moves.push({ row: newRow, col: newCol });
-            }
+        const dist = Math.hypot(player.x - powerup.x, player.y - powerup.y);
+        if (dist < player.radius + powerup.radius) {
+            activatePowerup(powerup.type);
+            powerups.splice(index, 1);
+            createExplosion(powerup.x, powerup.y, '#a78bfa');
         }
     });
-
-    return moves;
 }
 
-function getMinDistanceToPlayer(cpuRow, cpuCol) {
-    let minDistance = Infinity;
+function activatePowerup(type) {
+    gameState.powerup = type;
 
-    for (let row = 0; row < BOARD_SIZE; row++) {
-        for (let col = 0; col < BOARD_SIZE; col++) {
-            if (gameState.board[row][col] === PLAYER) {
-                const distance = Math.abs(row - cpuRow) + Math.abs(col - cpuCol);
-                minDistance = Math.min(minDistance, distance);
+    const duration = type === 'rapid' ? 10000 : type === 'slow' ? 6000 : 0;
+
+    if (duration > 0) {
+        gameState.powerupEndTime = Date.now() + duration;
+    }
+
+    updatePowerupDisplay();
+}
+
+function updatePowerupDisplay() {
+    const display = document.getElementById('powerupDisplay');
+
+    if (gameState.powerup) {
+        const names = {
+            shield: '🛡️ Shield',
+            rapid: '⚡ Rapid Fire',
+            slow: '🕐 Slow Time'
+        };
+        display.textContent = names[gameState.powerup];
+        display.classList.add('active');
+
+        if (gameState.powerup !== 'shield') {
+            const remaining = Math.max(0, gameState.powerupEndTime - Date.now());
+            if (remaining <= 0) {
+                gameState.powerup = null;
+                display.classList.remove('active');
             }
         }
-    }
-
-    return minDistance;
-}
-
-function checkGameOver() {
-    if (gameState.playerPieces === 0) {
-        showGameOver('CPU Won');
-        gameState.isGameOver = true;
-        return true;
-    }
-
-    if (gameState.cpuPieces === 0) {
-        showGameOver('You Win!');
-        gameState.isGameOver = true;
-        return true;
-    }
-
-    if (gameState.turnsWithoutCapture >= 20) {
-        showGameOver('Draw! No clear winner.');
-        gameState.isGameOver = true;
-        return true;
-    }
-
-    if (checkBoardRepetition()) {
-        showGameOver('Draw! No clear winner.');
-        gameState.isGameOver = true;
-        return true;
-    }
-
-    return false;
-}
-
-function showGameOver(message) {
-    const modal = document.getElementById('gameModal');
-    const modalTitle = document.getElementById('modalTitle');
-    modalTitle.textContent = message;
-    modal.classList.add('active');
-}
-
-function updateUI() {
-    document.getElementById('playerCount').textContent = gameState.playerPieces;
-    document.getElementById('cpuCount').textContent = gameState.cpuPieces;
-
-    const turnIndicator = document.getElementById('turnIndicator');
-    if (gameState.currentTurn === PLAYER) {
-        turnIndicator.textContent = 'Your Turn';
     } else {
-        turnIndicator.textContent = 'CPU Thinking...';
+        display.classList.remove('active');
     }
 }
 
-function saveBoardState() {
-    const boardString = JSON.stringify(gameState.board);
-    gameState.boardHistory.push(boardString);
+function createExplosion(x, y, color) {
+    for (let i = 0; i < 15; i++) {
+        const angle = (Math.PI * 2 * i) / 15;
+        const speed = Math.random() * 3 + 1;
+        particles.push({
+            x: x,
+            y: y,
+            radius: Math.random() * 3 + 1,
+            color: color,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 1
+        });
+    }
 }
 
-function checkBoardRepetition() {
-    const currentBoard = JSON.stringify(gameState.board);
-    let count = 0;
+function updateParticles() {
+    particles.forEach((particle, index) => {
+        particle.x += particle.vx;
+        particle.y += particle.vy;
+        particle.life -= 0.02;
 
-    for (const board of gameState.boardHistory) {
-        if (board === currentBoard) {
-            count++;
+        if (particle.life <= 0) {
+            particles.splice(index, 1);
         }
-    }
-
-    return count >= 3;
+    });
 }
 
-document.getElementById('restartBtn').addEventListener('click', () => {
-    const modal = document.getElementById('gameModal');
-    modal.classList.remove('active');
-    initGame();
-});
+function drawPlayer() {
+    ctx.save();
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = player.color;
+    ctx.fillStyle = player.color;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+    ctx.fill();
 
-initGame();
+    if (gameState.powerup === 'shield') {
+        ctx.strokeStyle = '#a78bfa';
+        ctx.lineWidth = 3;
+        ctx.shadowColor = '#a78bfa';
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, player.radius + 8, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+
+function drawProjectiles() {
+    projectiles.forEach(projectile => {
+        ctx.save();
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = projectile.color;
+        ctx.fillStyle = projectile.color;
+        ctx.beginPath();
+        ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    });
+}
+
+function drawEnemies() {
+    enemies.forEach(enemy => {
+        ctx.save();
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = enemy.color;
+        ctx.fillStyle = enemy.color;
+        ctx.beginPath();
+        ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    });
+}
+
+function drawPowerups() {
+    powerups.forEach(powerup => {
+        ctx.save();
+        ctx.translate(powerup.x, powerup.y);
+        ctx.rotate(powerup.rotation);
+
+        const colors = {
+            shield: '#a78bfa',
+            rapid: '#fbbf24',
+            slow: '#34d399'
+        };
+
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = colors[powerup.type];
+        ctx.strokeStyle = colors[powerup.type];
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, powerup.radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = colors[powerup.type];
+        ctx.font = '20px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const icons = { shield: '🛡️', rapid: '⚡', slow: '🕐' };
+        ctx.fillText(icons[powerup.type], 0, 0);
+
+        ctx.restore();
+    });
+}
+
+function drawParticles() {
+    particles.forEach(particle => {
+        ctx.save();
+        ctx.globalAlpha = particle.life;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = particle.color;
+        ctx.fillStyle = particle.color;
+        ctx.beginPath();
+        ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    });
+}
+
+function updateHUD() {
+    document.getElementById('health').textContent = gameState.health;
+    document.getElementById('score').textContent = gameState.score;
+}
+
+function updateDifficulty() {
+    const now = Date.now();
+
+    if (now - gameState.lastScoreTime >= 1000) {
+        gameState.score++;
+        gameState.lastScoreTime = now;
+        updateHUD();
+    }
+
+    gameState.difficulty = 1 + Math.floor(gameState.score / 50);
+}
+
+function gameLoop() {
+    if (!gameState.isRunning) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    updatePlayer();
+    autoShoot();
+    spawnEnemy();
+    spawnPowerup();
+    updateEnemies();
+    updateProjectiles();
+    updatePowerups();
+    updateParticles();
+    updateDifficulty();
+    updatePowerupDisplay();
+
+    drawParticles();
+    drawPowerups();
+    drawEnemies();
+    drawProjectiles();
+    drawPlayer();
+
+    requestAnimationFrame(gameLoop);
+}
+
+function startGame() {
+    gameState.isRunning = true;
+    gameState.score = 0;
+    gameState.health = 3;
+    gameState.enemiesKilled = 0;
+    gameState.difficulty = 1;
+    gameState.lastScoreTime = Date.now();
+    gameState.powerup = null;
+
+    player.x = canvas.width / 2;
+    player.y = canvas.height / 2;
+
+    projectiles = [];
+    enemies = [];
+    powerups = [];
+    particles = [];
+
+    lastShootTime = 0;
+    lastEnemySpawn = 0;
+
+    updateHUD();
+
+    document.getElementById('startModal').classList.remove('active');
+    document.getElementById('gameOverModal').classList.remove('active');
+
+    gameLoop();
+}
+
+function endGame() {
+    gameState.isRunning = false;
+
+    const highScore = localStorage.getItem('neonShooterHighScore') || 0;
+    if (gameState.score > highScore) {
+        localStorage.setItem('neonShooterHighScore', gameState.score);
+    }
+
+    document.getElementById('finalScore').textContent = gameState.score;
+    document.getElementById('highScore').textContent = Math.max(gameState.score, highScore);
+    document.getElementById('enemiesKilled').textContent = gameState.enemiesKilled;
+    document.getElementById('gameOverModal').classList.add('active');
+}
+
+document.getElementById('startButton').addEventListener('click', startGame);
+document.getElementById('restartButton').addEventListener('click', startGame);
